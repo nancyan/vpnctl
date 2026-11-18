@@ -1,0 +1,12 @@
+---
+# Explicitly opt-in, TEST VPS ONLY. Does not manage 3x-ui or VPN routing.
+- name: Bootstrap fresh isolated VPS (not an existing 3x-ui host)
+  hosts: all
+  gather_facts: true
+  become: true
+  serial: 1
+  roles:
+    - fresh_preflight
+    - nginx_base
+    - role: xray_standalone
+      when: vpnctl_install_xray | default(false) | bool

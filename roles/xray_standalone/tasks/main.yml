@@ -1,0 +1,72 @@
+---
+- name: Require verifiable pinned Xray artifact and private configuration
+  ansible.builtin.assert:
+    that:
+      - xray_release_url | default('') | length > 20
+      - xray_release_sha256 | default('') is match('^[0-9a-fA-F]{64}$')
+      - xray_config_src | default('') | length > 0
+    fail_msg: 'Set xray_release_url, xray_release_sha256 and xray_config_src in PRIVATE inventory; never commit secrets.'
+  no_log: true
+
+- name: Download pinned Xray binary package with SHA-256 verification
+  ansible.builtin.get_url:
+    url: '{{ xray_release_url }}'
+    dest: /tmp/vpnctl-xray.zip
+    checksum: 'sha256:{{ xray_release_sha256 }}'
+    mode: '0600'
+
+- name: Extract Xray package to dedicated location
+  ansible.builtin.unarchive:
+    src: /tmp/vpnctl-xray.zip
+    dest: /tmp
+    remote_src: true
+    include:
+      - xray
+
+- name: Install standalone Xray binary
+  ansible.builtin.copy:
+    src: /tmp/xray
+    dest: /usr/local/bin/xray
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Create private Xray configuration directory
+  ansible.builtin.file:
+    path: /etc/xray
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Install external private Xray JSON config (never in this repository)
+  ansible.builtin.copy:
+    src: '{{ xray_config_src }}'
+    dest: /etc/xray/config.json
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+
+- name: Verify standalone Xray JSON and protocol configuration
+  ansible.builtin.command:
+    argv: [/usr/local/bin/xray, run, -test, -config, /etc/xray/config.json]
+  changed_when: false
+  no_log: true
+
+- name: Install dedicated standalone Xray systemd service
+  ansible.builtin.template:
+    src: xray.service.j2
+    dest: /etc/systemd/system/xray.service
+    owner: root
+    group: root
+    mode: '0644'
+  register: xray_systemd_unit
+
+- name: Enable and start standalone Xray
+  ansible.builtin.systemd_service:
+    name: xray
+    daemon_reload: true
+    enabled: true
+    state: started

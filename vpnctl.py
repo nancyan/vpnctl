@@ -32,7 +32,7 @@ MESSAGES = {
   'noop':'Для изменения требуется --apply. Изменений нет.',
  }
 }
-PLAYBOOKS = {'ping':'ping.yml', 'status':'status.yml', 'backup':'backup.yml', 'clock':'clock.yml', 'discover':'discover.yml'}
+PLAYBOOKS = {'ping':'ping.yml', 'status':'status.yml', 'backup':'backup.yml', 'clock':'clock.yml', 'discover':'discover.yml', 'bootstrap':'bootstrap.yml'}
 
 def parse():
  p=argparse.ArgumentParser(description='vpnctl / Console for Ansible infrastructure')
@@ -47,6 +47,7 @@ def parse():
   s.add_argument('--apply',action='store_true',help='Perform write operations (backup, clock)')
   s.add_argument('--check',action='store_true',help='Ansible check mode')
   s.add_argument('--yes',action='store_true',help='Skip interactive confirmation for apply')
+  s.add_argument('--confirm-fresh-vps',action='store_true',help='Explicitly confirm target is a new disposable VPS (bootstrap only)')
  return p.parse_args()
 
 def main():
@@ -59,9 +60,13 @@ def main():
   print(t['host'],file=sys.stderr);return 2
  if a.host and a.all:
   print('--host and --all are mutually exclusive',file=sys.stderr);return 2
- modifying = a.command in ('backup','clock')
+ modifying = a.command in ('backup','clock','bootstrap')
  if modifying and not a.apply and not a.check:
   print(t['noop']);return 2
+ if a.command == 'bootstrap':
+  if a.all or not a.host or not a.confirm_fresh_vps or a.check or not a.apply or a.yes:
+   print('Bootstrap requires one --host, --confirm-fresh-vps and --apply, with interactive confirmation; no --all, --check or --yes.',file=sys.stderr)
+   return 2
  if a.command == 'backup' and a.check:
   print('Backup is not meaningful in --check mode / Резервная копия не создаётся в --check',file=sys.stderr);return 2
  if a.command in ('ping','status','discover') and a.apply:

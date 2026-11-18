@@ -1,0 +1,20 @@
+[Unit]
+Description=Standalone Xray service managed by vpnctl (NOT 3x-ui)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/local/bin/xray run -config /etc/xray/config.json
+Restart=on-failure
+RestartSec=3s
+LimitNOFILE=65535
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/etc/xray
+
+[Install]
+WantedBy=multi-user.target

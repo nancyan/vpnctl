@@ -23,4 +23,11 @@ class CliTests(unittest.TestCase):
         p=self.cmd('clock','--host','fi_in_2')
         self.assertEqual(p.returncode,2)
         self.assertIn('Изменений нет',p.stdout)
+    def test_bootstrap_requires_fresh_host_confirmation(self):
+        p=self.cmd('bootstrap','--host','test_vps','--apply')
+        self.assertEqual(p.returncode,2)
+        self.assertIn('confirm-fresh-vps',p.stderr)
+    def test_bootstrap_disallows_all(self):
+        p=self.cmd('bootstrap','--all','--apply','--confirm-fresh-vps')
+        self.assertEqual(p.returncode,2)
 if __name__=='__main__':unittest.main()

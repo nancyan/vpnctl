@@ -2,7 +2,7 @@
 
 [English](#english) | [Русский](#русский)
 
-> **Experimental v0.1** — safe starting point, **not** a complete one-command VPN installer. There is no automatic Xray/3x-ui installation or failover configuration in this release.
+> **Experimental v0.3** — safe starting point, **not** a complete one-command VPN installer. There is no automatic Xray/3x-ui installation or failover configuration in this release.
 
 ## English
 
@@ -78,3 +78,10 @@ python3 vpnctl.py --lang ru --inventory inventory/local.yml clock --host fi_in_2
 GitHub Actions validates Python unit tests and Ansible syntax on pushes/PRs. The workflow does **not** connect to VPS instances or read production credentials.
 
 GitHub Actions проверяет тесты Python и синтаксис Ansible при коммитах и pull request. Workflow **не подключается** к VPS и не использует рабочие секреты.
+
+
+## v0.3: Fresh VPS bootstrap / Подготовка тестового VPS
+
+**EN:** Read [Fresh VPS bootstrap](docs/bootstrap.en.md). A guarded, opt-in `bootstrap` command installs NGINX on a disposable host, with optional standalone Xray from a SHA-256 verified release and private JSON config. No 3x-ui, no REALITY setup, no failover yet.
+
+**RU:** См. [инструкцию подготовки тестового VPS](docs/bootstrap.ru.md). Команда `bootstrap` с дополнительными подтверждениями устанавливает NGINX на новом тестовом сервере и, по желанию, отдельный Xray из проверенного SHA-256 архива. Конфигурация 3x-ui, REALITY и резервирование пока не автоматизированы.

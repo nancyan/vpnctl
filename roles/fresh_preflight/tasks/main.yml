@@ -1,0 +1,46 @@
+---
+- name: Ensure explicitly designated fresh Ubuntu/Debian host
+  ansible.builtin.assert:
+    that:
+      - vpnctl_fresh_host | default(false) | bool
+      - ansible_facts['os_family'] == 'Debian'
+      - ansible_facts['distribution'] in ['Ubuntu', 'Debian']
+    fail_msg: 'Refusing: set vpnctl_fresh_host=true only on a disposable fresh VPS running Ubuntu/Debian.'
+
+- name: Look for manually created opt-in marker on new VPS
+  ansible.builtin.stat:
+    path: /etc/vpnctl-allow-bootstrap
+  register: vpnctl_bootstrap_marker
+
+- name: Refuse deployment without opt-in marker
+  ansible.builtin.assert:
+    that:
+      - vpnctl_bootstrap_marker.stat.exists
+      - vpnctl_bootstrap_marker.stat.isreg
+    fail_msg: 'Refusing: manually create /etc/vpnctl-allow-bootstrap on the disposable VPS after verifying its identity.'
+
+- name: Check existing x-ui units (3x-ui ownership guard)
+  ansible.builtin.command: systemctl list-unit-files x-ui.service --no-legend
+  register: vpnctl_existing_xui
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Refuse hosts with 3x-ui installed
+  ansible.builtin.assert:
+    that:
+      - vpnctl_existing_xui.stdout | trim == ''
+    fail_msg: '3x-ui detected. Never run standalone bootstrap on a 3x-ui-managed host.'
+
+- name: Detect existing Xray service
+  ansible.builtin.command: systemctl list-unit-files xray.service --no-legend
+  register: vpnctl_existing_xray
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Refuse unmanaged existing Xray service
+  ansible.builtin.assert:
+    that:
+      - vpnctl_existing_xray.stdout | trim == ''
+    fail_msg: 'Existing Xray detected; bootstrap is only for a fresh VPS.'

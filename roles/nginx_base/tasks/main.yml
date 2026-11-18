@@ -1,0 +1,19 @@
+---
+- name: Install NGINX on approved fresh VPS
+  ansible.builtin.apt:
+    name:
+      - nginx
+      - ca-certificates
+      - unzip
+    state: present
+    update_cache: true
+
+- name: Enable NGINX on approved fresh VPS
+  ansible.builtin.systemd_service:
+    name: nginx
+    enabled: true
+    state: started
+
+- name: Validate NGINX syntax (default distribution configuration)
+  ansible.builtin.command: nginx -t
+  changed_when: false
