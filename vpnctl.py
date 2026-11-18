@@ -32,7 +32,7 @@ MESSAGES = {
   'noop':'Для изменения требуется --apply. Изменений нет.',
  }
 }
-PLAYBOOKS = {'ping':'ping.yml', 'status':'status.yml', 'backup':'backup.yml', 'clock':'clock.yml'}
+PLAYBOOKS = {'ping':'ping.yml', 'status':'status.yml', 'backup':'backup.yml', 'clock':'clock.yml', 'discover':'discover.yml'}
 
 def parse():
  p=argparse.ArgumentParser(description='vpnctl / Console for Ansible infrastructure')
@@ -64,7 +64,7 @@ def main():
   print(t['noop']);return 2
  if a.command == 'backup' and a.check:
   print('Backup is not meaningful in --check mode / Резервная копия не создаётся в --check',file=sys.stderr);return 2
- if a.command in ('ping','status') and a.apply:
+ if a.command in ('ping','status','discover') and a.apply:
   print('--apply not used for read-only operations',file=sys.stderr);return 2
  if not shutil.which('ansible-playbook'):
   print(t['missing'],file=sys.stderr);return 2

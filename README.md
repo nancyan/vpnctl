@@ -23,12 +23,13 @@ cp inventory/hosts.yml inventory/local.yml
 python3 vpnctl.py --lang en --inventory inventory/local.yml hosts
 python3 vpnctl.py --lang en --inventory inventory/local.yml ping --host fi_in_2
 python3 vpnctl.py --lang en --inventory inventory/local.yml status --host fi_in_2
+python3 vpnctl.py --lang en --inventory inventory/local.yml discover --host fi_in_2
 python3 vpnctl.py --lang en --inventory inventory/local.yml backup --host fi_in_2 --apply
 python3 vpnctl.py --lang en --inventory inventory/local.yml clock --host fi_in_2 --check
 python3 vpnctl.py --lang en --inventory inventory/local.yml clock --host fi_in_2 --apply
 ```
 
-- `ping` and `status` are read-only.
+- `ping`, `status`, and `discover` are read-only; `discover` reports service activity and listening ports, not whether a VPN route is functioning.
 - `backup` requires `--apply` and stores sensitive data in `backups/`, which is ignored by Git. Protect/encrypt off-machine backups. The backup playbook needs `rsync` and potentially privileged remote rsync access; validate on a test VPS first.
 - `clock --apply` copies static files to `/var/www/adelaide-clock` **only**. It does not change NGINX `root`, TLS, Stream, Xray, 3x-ui or server routing. This is intentional to protect running VPN installations.
 - `--check` is best-effort Ansible check mode; not all third-party modules guarantee perfect no-change simulation.
@@ -62,11 +63,18 @@ cp inventory/hosts.yml inventory/local.yml
 python3 vpnctl.py --lang ru --inventory inventory/local.yml hosts
 python3 vpnctl.py --lang ru --inventory inventory/local.yml ping --host fi_in_2
 python3 vpnctl.py --lang ru --inventory inventory/local.yml status --host fi_in_2
+python3 vpnctl.py --lang ru --inventory inventory/local.yml discover --host fi_in_2
 python3 vpnctl.py --lang ru --inventory inventory/local.yml backup --host fi_in_2 --apply
 python3 vpnctl.py --lang ru --inventory inventory/local.yml clock --host fi_in_2 --check
 python3 vpnctl.py --lang ru --inventory inventory/local.yml clock --host fi_in_2 --apply
 ```
 
-Команды `ping` и `status` ничего не меняют. `backup` сохраняет **чувствительные данные** в локальной папке `backups/`; храните резервные копии зашифрованными и не выкладывайте в GitHub. Для `backup` нужен `rsync` и соответствующие права на удалённом сервере; сначала протестируйте на тестовом VPS. `clock --apply` только копирует файлы сайта в `/var/www/adelaide-clock`, **не меняет NGINX и VPN**. Рабочий NGINX пока требуется подключать вручную после проверки существующего `server`-блока.
+Команды `ping`, `status` и `discover` ничего не меняют. `discover` сообщает состояние сервисов и прослушиваемые TCP-порты, но не проверяет работу VPN-маршрута. `backup` сохраняет **чувствительные данные** в локальной папке `backups/`; храните резервные копии зашифрованными и не выкладывайте в GitHub. Для `backup` нужен `rsync` и соответствующие права на удалённом сервере; сначала протестируйте на тестовом VPS. `clock --apply` только копирует файлы сайта в `/var/www/adelaide-clock`, **не меняет NGINX и VPN**. Рабочий NGINX пока требуется подключать вручную после проверки существующего `server`-блока.
 
 Для новой инфраструктуры используйте тестовый VPS. Никогда не публикуйте приватные ключи REALITY, пароли панелей, секреты, UUID клиентов и реальные файлы конфигурации. Следующий этап — безопасная автоматизация полной установки с 3x-ui/Xray, снапшотами и проверками переключения.
+
+## CI / Автоматические проверки
+
+GitHub Actions validates Python unit tests and Ansible syntax on pushes/PRs. The workflow does **not** connect to VPS instances or read production credentials.
+
+GitHub Actions проверяет тесты Python и синтаксис Ansible при коммитах и pull request. Workflow **не подключается** к VPS и не использует рабочие секреты.

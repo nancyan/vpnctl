@@ -13,6 +13,12 @@ class CliTests(unittest.TestCase):
     def test_requires_host(self):
         p=self.cmd('status')
         self.assertEqual(p.returncode,2)
+    def test_discover_requires_host(self):
+        p=self.cmd('discover')
+        self.assertEqual(p.returncode,2)
+    def test_discover_rejects_apply(self):
+        p=self.cmd('discover','--host','fi_in_2','--apply')
+        self.assertEqual(p.returncode,2)
     def test_writes_require_apply(self):
         p=self.cmd('clock','--host','fi_in_2')
         self.assertEqual(p.returncode,2)

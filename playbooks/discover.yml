@@ -1,0 +1,41 @@
+---
+- name: Inspect service presence without changing the host
+  hosts: all
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Query service states without sudo
+      ansible.builtin.command:
+        argv: [systemctl, is-active, "{{ item }}"]
+      loop:
+        - nginx
+        - x-ui
+        - docker
+      register: service_states
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: List listening TCP sockets without process details
+      ansible.builtin.command:
+        argv: [ss, -tlnH]
+      register: tcp_sockets
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: List running containers if Docker is available
+      ansible.builtin.command:
+        argv: [docker, ps, --format, "{{ '{{' }}.Names{{ '}}' }}"]
+      register: containers
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Summarize read-only observations
+      ansible.builtin.debug:
+        msg:
+          systemd_states: "{{ dict(service_states.results | map(attribute='item') | zip(service_states.results | map(attribute='stdout'))) }}"
+          tcp_listeners: "{{ tcp_sockets.stdout_lines | default([]) }}"
+          container_names: "{{ containers.stdout_lines | default([]) }}"
+          note: 'Read-only discovery; not a functional test of VPN tunnels.'
