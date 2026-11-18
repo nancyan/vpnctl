@@ -129,3 +129,9 @@ python3 -m unittest discover -s tests -v
 **Security:** Never publish private inventory, Reality secrets, server credentials,
 SSH keys or generated bundles. The project does not connect to production systems
 without a user-invoked Ansible command. Review playbooks before use.
+
+## Experimental staged activation / Экспериментальная активация
+
+A fresh, expressly authorized **disposable test VPS** can use `activate` to promote an already-staged standalone Xray JSON after backup and syntax validation. The action is separated from `bootstrap` and `stage`, requires a single host and interactive `APPLY`, and attempts rollback if Xray restart or loopback listener check fails. It does **not** configure NGINX Stream, HTTPS certificates, DNS, or test an end-to-end VPN route. This feature is unverified on a real VPS. See [RU](docs/quickstart.ru.md) / [EN](docs/quickstart.en.md).
+
+На отдельном **тестовом VPS** команда `activate` сохраняет исходную конфигурацию, проверяет кандидата и перезапускает только самостоятельный Xray. При обнаруженной ошибке выполняется попытка отката. DNS, NGINX Stream, HTTPS и проверка VPN-маршрута остаются отдельными операциями. На реальном VPS процедура пока не испытана.

@@ -32,7 +32,7 @@ MESSAGES = {
   'noop':'Для изменения требуется --apply. Изменений нет.',
  }
 }
-PLAYBOOKS = {'ping':'ping.yml', 'status':'status.yml', 'backup':'backup.yml', 'clock':'clock.yml', 'discover':'discover.yml', 'bootstrap':'bootstrap.yml', 'stage':'stage.yml'}
+PLAYBOOKS = {'ping':'ping.yml', 'status':'status.yml', 'backup':'backup.yml', 'clock':'clock.yml', 'discover':'discover.yml', 'bootstrap':'bootstrap.yml', 'stage':'stage.yml', 'activate':'activate.yml'}
 
 def parse():
  p=argparse.ArgumentParser(description='vpnctl / Console for Ansible infrastructure')
@@ -85,12 +85,12 @@ def main():
   print(t['host'],file=sys.stderr);return 2
  if a.host and a.all:
   print('--host and --all are mutually exclusive',file=sys.stderr);return 2
- modifying = a.command in ('backup','clock','bootstrap','stage')
+ modifying = a.command in ('backup','clock','bootstrap','stage','activate')
  if modifying and not a.apply and not a.check:
   print(t['noop']);return 2
- if a.command in ('bootstrap','stage'):
+ if a.command in ('bootstrap','stage','activate'):
   if a.all or not a.host or not a.confirm_fresh_vps or a.check or not a.apply or a.yes:
-   print('Bootstrap/stage requires one --host, --confirm-fresh-vps and --apply, with interactive confirmation; no --all, --check or --yes.',file=sys.stderr)
+   print('Bootstrap/stage/activate requires one --host, --confirm-fresh-vps and --apply, with interactive confirmation; no --all, --check or --yes.',file=sys.stderr)
    return 2
  if a.command == 'stage' and (not a.bundle or not (Path(a.bundle).resolve() / a.host / 'xray.json').is_file()):
   print('Stage requires --bundle with xray.json matching --host',file=sys.stderr);return 2

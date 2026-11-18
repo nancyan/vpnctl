@@ -53,3 +53,13 @@ Both actions require interactive `APPLY`. Bootstrap rejects hosts where x-ui or 
 ### Not yet provided
 
 Automatic DNS/certificate issuance, installed 3x-ui configuration management, actual 443 Stream activation, Xray service activation for staged topology, complete client profile onboarding, failover and end-to-end integration tests. Do not interpret `stage` success as a functioning VPN.
+
+## Experimental activation (disposable test VPS only)
+
+After `bootstrap` and `stage`, the staged Xray config can be activated **separately**. First provision and verify DNS, HTTPS certificates, an HTTPS website on `127.0.0.1:9443`, NGINX Stream on `443`, firewall rules and external dependencies **manually**. The generated `nginx-stream.conf.example` is not automatically installed.
+
+```bash
+python3 vpnctl.py --lang en --inventory inventory/local.yml activate --host eu_exit --confirm-fresh-vps --apply
+```
+
+An interactive `APPLY` is mandatory. The playbook requires `/etc/vpnctl-allow-bootstrap`, rejects 3x-ui, requires a standalone `/etc/systemd/system/xray.service`, backs up the live JSON, checks the candidate via `xray run -test`, restarts **only Xray**, and checks a loopback listener (default port 3030). On detected failure it attempts to restore the previous JSON and restart Xray. **Rollback is best-effort, not atomic, and not guaranteed.** This does not test external VPN connectivity, TLS/SNI, certificate validity or firewall safety. Never run it on production hosts.

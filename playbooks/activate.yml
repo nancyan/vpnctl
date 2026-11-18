@@ -1,0 +1,142 @@
+---
+# ACTIVATION IS ONLY FOR FRESH, SINGLE, STANDALONE XRAY TEST VPS.
+# Staged configuration must already pass xray -test. No NGINX edits.
+- name: Activate a previously staged Xray config on an isolated test VPS
+  hosts: all
+  gather_facts: true
+  become: true
+  serial: 1
+  vars:
+    vpnctl_live_config: /etc/xray/config.json
+    vpnctl_staged_config: /etc/vpnctl/staged/xray.json
+  tasks:
+    - name: Enforce explicit fresh-host designation
+      ansible.builtin.assert:
+        that:
+          - vpnctl_fresh_host | default(false) | bool
+          - ansible_facts['os_family'] == 'Debian'
+          - ansible_facts['distribution'] in ['Ubuntu', 'Debian']
+        fail_msg: 'Refusing: only an explicitly designated disposable Ubuntu/Debian VPS is eligible.'
+
+    - name: Require operator-created authorization marker
+      ansible.builtin.stat:
+        path: /etc/vpnctl-allow-bootstrap
+      register: authorization
+
+    - name: Check forbidden 3x-ui ownership
+      ansible.builtin.command:
+        argv: [systemctl, list-unit-files, x-ui.service, --no-legend]
+      register: xui_unit
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Inspect standalone systemd unit
+      ansible.builtin.stat:
+        path: /etc/systemd/system/xray.service
+      register: standalone_unit
+
+    - name: Inspect staged configuration and previous live configuration
+      ansible.builtin.stat:
+        path: '{{ item }}'
+      loop:
+        - '{{ vpnctl_staged_config }}'
+        - '{{ vpnctl_live_config }}'
+      register: configs
+
+    - name: Refuse unsafe or incomplete activation
+      ansible.builtin.assert:
+        that:
+          - authorization.stat.exists and authorization.stat.isreg
+          - xui_unit.stdout | trim == ''
+          - standalone_unit.stat.exists and standalone_unit.stat.isreg
+          - configs.results[0].stat.exists and configs.results[0].stat.isreg
+          - configs.results[1].stat.exists and configs.results[1].stat.isreg
+        fail_msg: 'Missing marker, Xray files or standalone unit; or 3x-ui detected. Activation refused.'
+
+    - name: Validate staged Xray config before touching live configuration
+      ansible.builtin.command:
+        argv: [/usr/local/bin/xray, run, -test, -config, '{{ vpnctl_staged_config }}']
+      changed_when: false
+      no_log: true
+
+    - name: Ensure backups directory exists with private permissions
+      ansible.builtin.file:
+        path: /etc/vpnctl/backups
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+
+    - name: Create a timestamp for unique rollback snapshot
+      ansible.builtin.command:
+        argv: [date, -u, +%Y%m%dT%H%M%SZ]
+      register: backup_time
+      changed_when: false
+
+    - name: Save exact live Xray JSON before activation
+      ansible.builtin.copy:
+        src: '{{ vpnctl_live_config }}'
+        dest: '/etc/vpnctl/backups/xray-{{ backup_time.stdout }}.json'
+        remote_src: true
+        owner: root
+        group: root
+        mode: '0600'
+      no_log: true
+
+    - name: Activate with automatic rollback on service validation failure
+      block:
+        - name: Copy validated candidate to live Xray JSON
+          ansible.builtin.copy:
+            src: '{{ vpnctl_staged_config }}'
+            dest: '{{ vpnctl_live_config }}'
+            remote_src: true
+            owner: root
+            group: root
+            mode: '0600'
+          no_log: true
+
+        - name: Restart standalone Xray service to load candidate
+          ansible.builtin.systemd_service:
+            name: xray
+            state: restarted
+
+        - name: Verify Xray service is active
+          ansible.builtin.command:
+            argv: [systemctl, is-active, --quiet, xray]
+          register: active_xray
+          changed_when: false
+          retries: 3
+          delay: 2
+          until: active_xray.rc == 0
+
+        - name: Verify a local Xray listener is present
+          ansible.builtin.command:
+            argv: [ss, -tlnH]
+          register: listeners
+          changed_when: false
+          failed_when: "('127.0.0.1:' ~ (vpnctl_xray_listen_port | default(3030) | string)) not in listeners.stdout"
+
+      rescue:
+        - name: Restore exact prior live configuration
+          ansible.builtin.copy:
+            src: '/etc/vpnctl/backups/xray-{{ backup_time.stdout }}.json'
+            dest: '{{ vpnctl_live_config }}'
+            remote_src: true
+            owner: root
+            group: root
+            mode: '0600'
+          no_log: true
+
+        - name: Restart Xray with restored configuration
+          ansible.builtin.systemd_service:
+            name: xray
+            state: restarted
+
+        - name: Explain activation failure and rollback
+          ansible.builtin.fail:
+            msg: 'Candidate activation failed: previous Xray configuration restored. Check connectivity manually.'
+
+    - name: Report activation outcome without private data
+      ansible.builtin.debug:
+        msg: 'Standalone Xray running with staged config. Backup retained under /etc/vpnctl/backups/. End-to-end tunnel and HTTPS decoy still require separate tests.'
