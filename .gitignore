@@ -7,3 +7,14 @@ __pycache__/
 inventory/local.yml
 *.pem
 *.key
+# Private render inputs/outputs
+rendered/
+topology.local.json
+*.local.json
+
+# Generated confidential staging/topology files
+*.rendered.json
+*.secrets.json
+*.secret.yml
+local-secrets/
+staging/

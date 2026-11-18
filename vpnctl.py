@@ -32,7 +32,7 @@ MESSAGES = {
   'noop':'Для изменения требуется --apply. Изменений нет.',
  }
 }
-PLAYBOOKS = {'ping':'ping.yml', 'status':'status.yml', 'backup':'backup.yml', 'clock':'clock.yml', 'discover':'discover.yml', 'bootstrap':'bootstrap.yml'}
+PLAYBOOKS = {'ping':'ping.yml', 'status':'status.yml', 'backup':'backup.yml', 'clock':'clock.yml', 'discover':'discover.yml', 'bootstrap':'bootstrap.yml', 'stage':'stage.yml'}
 
 def parse():
  p=argparse.ArgumentParser(description='vpnctl / Console for Ansible infrastructure')
@@ -40,6 +40,11 @@ def parse():
  p.add_argument('--inventory', default='inventory/hosts.yml')
  sub=p.add_subparsers(dest='command',required=True)
  sub.add_parser('hosts',help='Show inventory file (no connections)')
+ for command, helptext in [('doctor','Inspect this computer (offline)'), ('keys','Create local UUID/short ID and optional Reality keys'), ('validate','Validate topology offline'), ('plan','Print offline deployment plan')]:
+  sub.add_parser(command, help=helptext)
+ renderer=sub.add_parser('render',help='Generate Xray/NGINX configs OFFLINE from private topology')
+ renderer.add_argument('--topology',required=True)
+ renderer.add_argument('--output',required=True)
  for cmd in PLAYBOOKS:
   s=sub.add_parser(cmd)
   s.add_argument('--host',help='Limit to one inventory hostname')
@@ -47,11 +52,31 @@ def parse():
   s.add_argument('--apply',action='store_true',help='Perform write operations (backup, clock)')
   s.add_argument('--check',action='store_true',help='Ansible check mode')
   s.add_argument('--yes',action='store_true',help='Skip interactive confirmation for apply')
-  s.add_argument('--confirm-fresh-vps',action='store_true',help='Explicitly confirm target is a new disposable VPS (bootstrap only)')
+  s.add_argument('--confirm-fresh-vps',action='store_true',help='Explicit confirmation for fresh VPS bootstrap/stage')
+  s.add_argument('--bundle',help='Local rendered bundle path (stage only)')
  return p.parse_args()
 
 def main():
- a=parse(); t=MESSAGES[a.lang]; inventory=(BASE/a.inventory).resolve()
+ # Dispatch offline commands before requiring an inventory.
+ if len(sys.argv) > 1:
+  args=sys.argv[1:]
+  lang='ru'
+  for idx, arg in enumerate(args):
+   if arg=='--lang' and idx+1<len(args): lang=args[idx+1]
+  commands={'doctor': ('tools.doctor','main'), 'keys':('tools.keygen','main'),
+            'validate':('tools.verify','main'), 'plan':('tools.plan','main')}
+  for index, arg in enumerate(args):
+   if arg in commands:
+    from importlib import import_module
+    module, func=commands[arg]
+    params=args[index+1:]
+    if arg=='doctor' and '--lang' not in params: params+=['--lang',lang]
+    return getattr(import_module(module),func)(params)
+ a=parse(); t=MESSAGES[a.lang]
+ if a.command=='render':
+  from tools.render_topology import main as render_main
+  return render_main(['--topology',a.topology,'--output',a.output])
+ inventory=(BASE/a.inventory).resolve()
  if not inventory.is_file():
   print(f'Inventory not found: {inventory}',file=sys.stderr);return 2
  if a.command=='hosts':
@@ -60,13 +85,17 @@ def main():
   print(t['host'],file=sys.stderr);return 2
  if a.host and a.all:
   print('--host and --all are mutually exclusive',file=sys.stderr);return 2
- modifying = a.command in ('backup','clock','bootstrap')
+ modifying = a.command in ('backup','clock','bootstrap','stage')
  if modifying and not a.apply and not a.check:
   print(t['noop']);return 2
- if a.command == 'bootstrap':
+ if a.command in ('bootstrap','stage'):
   if a.all or not a.host or not a.confirm_fresh_vps or a.check or not a.apply or a.yes:
-   print('Bootstrap requires one --host, --confirm-fresh-vps and --apply, with interactive confirmation; no --all, --check or --yes.',file=sys.stderr)
+   print('Bootstrap/stage requires one --host, --confirm-fresh-vps and --apply, with interactive confirmation; no --all, --check or --yes.',file=sys.stderr)
    return 2
+ if a.command == 'stage' and (not a.bundle or not (Path(a.bundle).resolve() / a.host / 'xray.json').is_file()):
+  print('Stage requires --bundle with xray.json matching --host',file=sys.stderr);return 2
+ if a.command != 'stage' and a.bundle:
+  print('--bundle is only valid for stage',file=sys.stderr);return 2
  if a.command == 'backup' and a.check:
   print('Backup is not meaningful in --check mode / Резервная копия не создаётся в --check',file=sys.stderr);return 2
  if a.command in ('ping','status','discover') and a.apply:
@@ -80,6 +109,9 @@ def main():
    print(t['cancel']);return 1
  cmd=['ansible-playbook','-i',str(inventory),str(BASE/'playbooks'/PLAYBOOKS[a.command])]
  if a.host:cmd+=['--limit',a.host]
+ if a.command=='stage':
+  import json
+  cmd+=['--extra-vars',json.dumps({'vpnctl_bundle':str(Path(a.bundle).resolve())})]
  if a.check:cmd+=['--check','--diff']
  print('Executing:', ' '.join(cmd),flush=True)
  return subprocess.run(cmd,cwd=BASE,check=False).returncode

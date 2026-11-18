@@ -1,0 +1,23 @@
+{
+  "nodes": {
+    "eu_entry": {
+      "role": "entry",
+      "domain": "entry.example.com",
+      "client_uuid": "00000000-0000-4000-8000-000000000001",
+      "reality_private_key": "REPLACE_WITH_43_CHAR_X25519_PRIVATE_KEY_VALUE___",
+      "reality_public_key": "REPLACE_WITH_43_CHAR_X25519_PUBLIC_KEY_VALUE____",
+      "short_id": "a1b2",
+      "path": "/connect-v1",
+      "next_hop": "eu_exit"
+    },
+    "eu_exit": {
+      "role": "exit",
+      "domain": "exit.example.com",
+      "client_uuid": "00000000-0000-4000-8000-000000000002",
+      "reality_private_key": "REPLACE_WITH_43_CHAR_X25519_PRIVATE_KEY_VALUE___",
+      "reality_public_key": "REPLACE_WITH_43_CHAR_X25519_PUBLIC_KEY_VALUE____",
+      "short_id": "c3d4",
+      "path": "/connect-v1"
+    }
+  }
+}

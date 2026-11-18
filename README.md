@@ -85,3 +85,47 @@ GitHub Actions проверяет тесты Python и синтаксис Ansibl
 **EN:** Read [Fresh VPS bootstrap](docs/bootstrap.en.md). A guarded, opt-in `bootstrap` command installs NGINX on a disposable host, with optional standalone Xray from a SHA-256 verified release and private JSON config. No 3x-ui, no REALITY setup, no failover yet.
 
 **RU:** См. [инструкцию подготовки тестового VPS](docs/bootstrap.ru.md). Команда `bootstrap` с дополнительными подтверждениями устанавливает NGINX на новом тестовом сервере и, по желанию, отдельный Xray из проверенного SHA-256 архива. Конфигурация 3x-ui, REALITY и резервирование пока не автоматизированы.
+
+## v0.4 — offline topology configuration / Генерация топологии
+
+The `render` command generates example Xray and NGINX Stream configuration files for `entry`, `relay`, and `exit` nodes, without connecting to any VPS. **No automatic deployment and no 3x-ui modification.** See [English guide](docs/topology.en.md).
+
+Команда `render` локально генерирует конфигурации Xray и фрагменты NGINX Stream для узлов `entry`, `relay` и `exit`, без доступа к VPS. **Автоматического развёртывания и изменения 3x-ui пока нет.** См. [русскую инструкцию](docs/topology.ru.md).
+
+```bash
+cp examples/topology.example.json topology.local.json
+# Replace intentionally invalid X25519 key placeholders and other sample values
+python3 vpnctl.py --lang ru render --topology topology.local.json --output rendered
+```
+
+---
+
+## v1.0 development bundle / Сборка v1.0 для разработки
+
+This release combines a bilingual Ansible CLI, local topology generator, local
+prerequisite checks, credentials generation, offline validation and planning,
+read-only remote diagnostics, opt-in fresh test VPS bootstrap and *non-activating*
+configuration staging. It is **not** a production-ready fully automatic VPN installer.
+
+Сборка объединяет двуязычную консоль, генератор топологий, проверку окружения,
+генерацию учётных параметров, локальную валидацию, диагностику серверов,
+подготовку отдельного тестового VPS и передачу конфигураций **без активации**.
+Это **не готовый промышленный установщик VPN «в один клик»**.
+
+- [English quick start](docs/quickstart.en.md)
+- [Русская инструкция](docs/quickstart.ru.md)
+
+Quick commands / Команды:
+
+```bash
+python3 vpnctl.py --lang ru doctor
+python3 vpnctl.py --lang en keys
+python3 vpnctl.py --lang ru validate --topology topology.local.json
+python3 vpnctl.py --lang en plan --topology topology.local.json
+python3 vpnctl.py --lang ru render --topology topology.local.json --output rendered
+python3 -m unittest discover -s tests -v
+```
+
+**Security:** Never publish private inventory, Reality secrets, server credentials,
+SSH keys or generated bundles. The project does not connect to production systems
+without a user-invoked Ansible command. Review playbooks before use.
