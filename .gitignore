@@ -1,0 +1,9 @@
+backups/
+.vault_password
+*.retry
+__pycache__/
+.venv/
+*.log
+inventory/local.yml
+*.pem
+*.key

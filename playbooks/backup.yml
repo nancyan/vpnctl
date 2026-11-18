@@ -1,0 +1,36 @@
+---
+- name: Back up server configuration to local Ansible controller
+  hosts: all
+  become: true
+  gather_facts: false
+  vars:
+    backup_root: "{{ playbook_dir }}/../backups"
+    backup_paths:
+      - /etc/nginx
+      - /etc/x-ui
+  tasks:
+    - name: Create local backup directory
+      ansible.builtin.file:
+        path: "{{ backup_root }}/{{ inventory_hostname }}"
+        state: directory
+        mode: '0700'
+      delegate_to: localhost
+      become: false
+    - name: Check backup source directories
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      loop: "{{ backup_paths }}"
+      register: source_status
+    - name: Download existing directories with restrictive local permissions
+      ansible.posix.synchronize:
+        mode: pull
+        src: "{{ item.item }}/"
+        dest: "{{ backup_root }}/{{ inventory_hostname }}/{{ item.item | regex_replace('^/', '') }}/"
+        archive: true
+        rsync_opts:
+          - '--chmod=F600,D700'
+      loop: "{{ source_status.results }}"
+      when: item.stat.exists and item.stat.isdir
+      delegate_to: localhost
+      become: false
+      # Synchronize may require remote sudo/rsync rights; see docs.

@@ -1,0 +1,7 @@
+---
+- name: Deploy a static clock site without changing VPN routing
+  hosts: all
+  become: true
+  gather_facts: false
+  roles:
+    - clock_site

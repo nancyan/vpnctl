@@ -1,0 +1,5 @@
+---
+clock_site_repo: https://github.com/nancyan/adelaide-time.git
+clock_site_version: main
+clock_site_root: /var/www/adelaide-clock
+# Deployment only copies static files. It does NOT edit nginx server blocks.

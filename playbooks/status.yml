@@ -1,0 +1,26 @@
+---
+- name: Inspect server status without modifications
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Check nginx status
+      ansible.builtin.command: systemctl is-active nginx
+      register: nginx_state
+      changed_when: false
+      failed_when: false
+    - name: Check 3x-ui status
+      ansible.builtin.command: systemctl is-active x-ui
+      register: xui_state
+      changed_when: false
+      failed_when: false
+    - name: Inspect listening TCP ports
+      ansible.builtin.command: ss -tln
+      register: ports
+      changed_when: false
+      failed_when: false
+    - name: Display summary
+      ansible.builtin.debug:
+        msg:
+          nginx: "{{ nginx_state.stdout | default('unknown') }}"
+          x_ui: "{{ xui_state.stdout | default('unknown') }}"
+          tcp_ports: "{{ ports.stdout_lines | default([]) }}"

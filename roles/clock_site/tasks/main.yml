@@ -1,0 +1,33 @@
+---
+- name: Ensure git is installed
+  ansible.builtin.package:
+    name: git
+    state: present
+- name: Create clock site directory
+  ansible.builtin.file:
+    path: "{{ clock_site_root }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+- name: Download clock repository to a temporary directory
+  ansible.builtin.git:
+    repo: "{{ clock_site_repo }}"
+    dest: /opt/vpnctl-adelaide-source
+    version: "{{ clock_site_version }}"
+    update: true
+- name: Publish static files
+  ansible.builtin.copy:
+    src: "/opt/vpnctl-adelaide-source/{{ item }}"
+    dest: "{{ clock_site_root }}/{{ item }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - index.html
+    - script.js
+    - style.css
+- name: Report configured website directory
+  ansible.builtin.debug:
+    msg: "Static files are in {{ clock_site_root }}. NGINX root must be configured separately."
